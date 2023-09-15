@@ -38,6 +38,6 @@
 
 ###
 
-## Example running 500 data performance
+## Example running bot
 
 ![App Screenshot](https://github.com/eldhoral/translator-telegram-bot/blob/main/Screen_Recording_20230915_171924_Telegram.gif)
