@@ -40,4 +40,7 @@
 
 ## Example running bot
 
-![App Screenshot](https://github.com/eldhoral/translator-telegram-bot/blob/main/Screen_Recording_20230915_171924_Telegram.gif)
+<div align="center">
+    <img src="https://github.com/eldhoral/translator-telegram-bot/blob/main/Screen_Recording_20230915_171924_Telegram.gif" width="200px"</img> 
+</div>
+
