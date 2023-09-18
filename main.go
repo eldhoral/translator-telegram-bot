@@ -1,14 +1,14 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
 
-	"github.com/aethiopicuschan/voicevox"
-	gt "github.com/bas24/googletranslatefree"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	"github.com/go-redis/redis/v8"
 	"github.com/joho/godotenv"
+	"github.com/spf13/cast"
 )
 
 func loadConfig() {
@@ -18,57 +18,25 @@ func loadConfig() {
 	}
 }
 
-func main() {
-	loadConfig()
-	bot, err := tgbotapi.NewBotAPI(os.Getenv("TELEGRAM_BOT_API_KEY"))
+func initRedisClient() (client *redis.Client, err error) {
+	var ctx = context.TODO()
+	client = redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%s", os.Getenv("REDIS_HOST"), os.Getenv("REDIS_PORT")),
+		Username: os.Getenv("REDIS_PASSWORD"),
+		Password: os.Getenv("REDIS_PASSWORD"),
+		DB:       cast.ToInt(os.Getenv("REDIS_DB")),
+	})
+	err = client.Ping(ctx).Err()
 	if err != nil {
-		log.Panic(err)
+		log.Println("Error in initializing redis client: " + err.Error())
+		return
 	}
-
-	bot.Debug = true
-
-	log.Printf("Authorized on account %s", bot.Self.UserName)
-
-	u := tgbotapi.NewUpdate(0)
-	u.Timeout = 60
-
-	updates := bot.GetUpdatesChan(u)
-
-	for update := range updates {
-		if update.Message != nil { // If we got a message
-			log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
-
-			client := voicevox.NewClient("http", "localhost:50021")
-			result, _ := gt.Translate(update.Message.Text, "id", "ja")
-			query, err := client.CreateQuery(1, result)
-			if err != nil {
-				fmt.Printf("CreateQuery error: %v\n", err)
-				return
-			}
-			wavAudio, err := client.CreateVoice(1, true, query)
-			if err != nil {
-				fmt.Printf("CreateVoice error: %v\n", err)
-				return
-			}
-
-			CreateAudioFile(wavAudio, result)
-
-			// msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
-			msg := tgbotapi.NewAudio(update.Message.From.ID, tgbotapi.FilePath("audio/"+result+".mp3"))
-
-			bot.Send(msg)
-		}
-	}
+	log.Println("Redis is running")
+	return
 }
 
-func CreateAudioFile(wavAudio []byte, filename string) {
-	file, err := os.Create("audio/" + filename + ".mp3")
-	if err != nil {
-		fmt.Printf("CreateAudioFile error ; %v\n ", err)
-	}
-	bytesWritten, err := file.Write(wavAudio)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Printf("Wrote %d bytes.\n", bytesWritten)
+func main() {
+	loadConfig()
+	redisClient, _ := initRedisClient()
+	TelegramBot(redisClient)
 }
