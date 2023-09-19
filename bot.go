@@ -18,6 +18,7 @@ import (
 
 const (
 	CacheKeyTelegram = "go_telegram_bot:chat_id:"
+	StartMessage     = "/start"
 )
 
 type User struct {
@@ -53,7 +54,7 @@ func TelegramBot(client *redis.Client) {
 	for update := range updates {
 		if update.Message != nil { // If we got a message
 			log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
-			if update.Message.Text == "/start" {
+			if update.Message.Text == StartMessage {
 				text := "Please choose voice style (づ ◕‿◕ )づ"
 				msgText := tgbotapi.NewMessage(update.Message.From.ID, text)
 				bot.Send(msgText)
@@ -66,7 +67,7 @@ func TelegramBot(client *redis.Client) {
 				data, err := redisClient.NewRedisClient(client).Get(context.TODO(), CacheKeyTelegram+cast.ToString(update.Message.From.ID))
 				if err != nil || data == "" {
 					text := "Please choose voice again ヽ༼ ಠ益ಠ ༽ﾉ"
-					msgText := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, text)
+					msgText := tgbotapi.NewMessage(update.Message.From.ID, text)
 					bot.Send(msgText)
 
 					msgCallBack := tgbotapi.NewMessage(update.Message.From.ID, update.Message.Text)
@@ -76,7 +77,7 @@ func TelegramBot(client *redis.Client) {
 				userTelegram := &User{}
 				err = jsoniter.Unmarshal([]byte(data), userTelegram)
 
-				client := voicevox.NewClient("http", "localhost:50021")
+				client := voicevox.NewClient("http", os.Getenv("VOICEVOX_HOST")+":"+os.Getenv("VOICEVOX_PORT"))
 				result, _ := gt.Translate(update.Message.Text, "id", "ja")
 				query, err := client.CreateQuery(userTelegram.SpeakerSelected, result)
 				if err != nil {
