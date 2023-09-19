@@ -1,0 +1,52 @@
+version: '3.7'
+services:
+  app:
+    container_name: go-telegram-bot
+    image: eldhoral/go-telegram-bot
+    build:
+      context: .
+      dockerfile: ./docker/Dockerfile
+      args:
+          - repo_user=
+          - repo_token=
+          - repo_url=
+          - repo_organization=
+          - app_name=
+    volumes: 
+      - .:/app
+    ports: 
+      - 8085:8085
+    networks: 
+      - backend
+    depends_on:
+      - cache
+  cache:
+    image: redis:6.2-alpine
+    restart: always
+    ports:
+      - '6379:6379'
+    volumes: 
+      - cache:/data
+    networks: 
+      - backend
+  voicevox:
+    image: voicevox/voicevox_engine:cpu-ubuntu20.04-latest
+    restart: always
+    ports:
+      - '50021:50021'
+    volumes: 
+      - voicevox:/data
+    networks: 
+      - backend
+
+volumes:
+  voicevox:
+    driver: local
+  cache:
+    driver: local
+  app:
+    driver: local
+
+networks:
+  backend:
+    driver: bridge
