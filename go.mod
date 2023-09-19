@@ -2,13 +2,11 @@ module go-telegram-bot
 
 go 1.19
 
-replace github.com/go-telegram-bot-api/telegram-bot-api/v5 => ../telegram-bot-api
-
 require (
 	github.com/aethiopicuschan/voicevox v1.0.0
 	github.com/bas24/googletranslatefree v0.0.0-20220326200502-05ed9e639439
 	github.com/go-redis/redis/v8 v8.11.5
-	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.0.0-00010101000000-000000000000
+	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/joho/godotenv v1.5.1
 	github.com/json-iterator/go v1.1.12
 	github.com/spf13/cast v1.5.1
