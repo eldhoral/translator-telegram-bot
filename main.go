@@ -36,7 +36,7 @@ func initRedisClient() (client *redis.Client, err error) {
 }
 
 func main() {
-	loadConfig()
+	// loadConfig()
 	redisClient, _ := initRedisClient()
 	TelegramBot(redisClient)
 }
