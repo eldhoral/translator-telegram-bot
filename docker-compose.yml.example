@@ -5,7 +5,7 @@ services:
     image: eldhoral/go-telegram-bot
     build:
       context: .
-      dockerfile: ./docker/Dockerfile
+      dockerfile: ./Dockerfile
       args:
           - repo_user=
           - repo_token=
