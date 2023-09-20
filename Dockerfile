@@ -5,12 +5,13 @@ RUN apk update && apk upgrade && \
     libc-dev && \
     mkdir /app
 
+
 WORKDIR /app
 
 ENV TZ=Asia/Jakarta
 ENV app_name=go-telegram-bot
 
-ADD . /app
+COPY . .
 RUN mkdir -p audio \
     && chown -R $(id -u $(whoami)):0 audio \
     && chmod -R g+w audio
