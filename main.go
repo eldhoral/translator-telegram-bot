@@ -12,10 +12,10 @@ import (
 )
 
 func loadConfig() {
-	err := godotenv.Load(".env")
-	if err != nil {
-		log.Panic(err)
-	}
+	_ = godotenv.Load(".env")
+	// if err != nil {
+	// 	log.Panic(err)
+	// }
 }
 
 func initRedisClient() (client *redis.Client, err error) {
