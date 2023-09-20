@@ -81,13 +81,20 @@ func TelegramBot(client *redis.Client) {
 				result, _ := gt.Translate(update.Message.Text, "id", "ja")
 				query, err := client.CreateQuery(userTelegram.SpeakerSelected, result)
 				if err != nil {
-					fmt.Printf("CreateQuery error: %v\n", err)
-					return
+					text := "Oops, So many error (つ﹏⊂). Please try again"
+					msgText := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, text)
+					bot.Send(msgText)
+					log.Printf("CreateVoice error: %v\n", err)
+					continue
 				}
+
 				wavAudio, err := client.CreateVoice(userTelegram.SpeakerSelected, true, query)
 				if err != nil {
-					fmt.Printf("CreateVoice error: %v\n", err)
-					return
+					text := "Oops, So many error (つ﹏⊂). Please try again"
+					msgText := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, text)
+					bot.Send(msgText)
+					log.Printf("CreateVoice error: %v\n", err)
+					continue
 				}
 
 				CreateAudioFile(wavAudio, result, update.Message.From.ID)
