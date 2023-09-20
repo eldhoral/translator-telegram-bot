@@ -56,4 +56,5 @@ func startApp(r *mux.Router) {
 
 	srv.Addr = fmt.Sprintf("%s:%d", "0.0.0.0", 8085)
 	srv.Handler = r
+	log.Printf("[API] HTTP serve at %s\n", srv.Addr)
 }
