@@ -56,10 +56,7 @@ func TelegramBot(client *redis.Client) {
 			log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
 			if update.Message.Text == StartMessage {
 				text := "Please choose voice style (づ ◕‿◕ )づ"
-				msgText := tgbotapi.NewMessage(update.Message.From.ID, text)
-				bot.Send(msgText)
-
-				msgCallBack := tgbotapi.NewMessage(update.Message.From.ID, update.Message.Text)
+				msgCallBack := tgbotapi.NewMessage(update.Message.From.ID, text)
 				msgCallBack.ReplyMarkup = msgButtonMarkup
 				bot.Send(msgCallBack)
 				continue
@@ -82,7 +79,7 @@ func TelegramBot(client *redis.Client) {
 				query, err := client.CreateQuery(userTelegram.SpeakerSelected, result)
 				if err != nil {
 					text := "Oops, So many error (つ﹏⊂). Please try again"
-					msgText := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, text)
+					msgText := tgbotapi.NewMessage(update.Message.From.ID, text)
 					bot.Send(msgText)
 					log.Printf("CreateVoice error: %v\n", err)
 					continue
@@ -91,7 +88,7 @@ func TelegramBot(client *redis.Client) {
 				wavAudio, err := client.CreateVoice(userTelegram.SpeakerSelected, true, query)
 				if err != nil {
 					text := "Oops, So many error (つ﹏⊂). Please try again"
-					msgText := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, text)
+					msgText := tgbotapi.NewMessage(update.Message.From.ID, text)
 					bot.Send(msgText)
 					log.Printf("CreateVoice error: %v\n", err)
 					continue
