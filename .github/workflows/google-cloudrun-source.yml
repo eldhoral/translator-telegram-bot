@@ -52,6 +52,7 @@ on:
     
 env:
   PROJECT_ID: ${{ secrets.PROJECT_ID }} # TODO: update Google Cloud project id
+  IMAGE_NAME: eldhoral/go-telegram-bot
 
 jobs:
   deploy:
@@ -80,10 +81,20 @@ jobs:
       #   with:
       #     credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
 
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          push: true
+          tags: gcr.io/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}:latest
+          build-args: |
+            HTTP_PORT=8085
+
       - name: Deploy to Cloud Run
         id: deploy
         uses: google-github-actions/deploy-cloudrun@v0
         with:
+          image: gcr.io/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}:latest
           service: ${{ secrets.SERVICE }}
           region: ${{ secrets.REGION }}
           # NOTE: If required, update to the appropriate source folder
