@@ -22,7 +22,7 @@ func initRedisClient() (client *redis.Client, err error) {
 	var ctx = context.TODO()
 	client = redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%s", os.Getenv("REDIS_HOST"), os.Getenv("REDIS_PORT")),
-		Username: os.Getenv("REDIS_PASSWORD"),
+		Username: os.Getenv("REDIS_USERNAME"),
 		Password: os.Getenv("REDIS_PASSWORD"),
 		DB:       cast.ToInt(os.Getenv("REDIS_DB")),
 	})
