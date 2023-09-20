@@ -15,10 +15,10 @@ RUN mkdir -p audio \
     && chmod -R g+w audio
 
 RUN go mod download
-
-RUN go install -mod=mod github.com/githubnemo/CompileDaemon
 RUN go get bitbucket.org/liamstask/goose/cmd/goose
+
+RUN go build -o "./bin/go-telegram-api" .
 
 EXPOSE 8085
 
-ENTRYPOINT ["/app"]
+ENTRYPOINT ["./bin/go-telegram-api"]
