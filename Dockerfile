@@ -17,7 +17,7 @@ RUN mkdir -p audio \
 RUN go mod download
 RUN go get bitbucket.org/liamstask/goose/cmd/goose
 
-RUN go build - go-telegram-api
+RUN go build -o go-telegram-api
 
 EXPOSE 8085
 
