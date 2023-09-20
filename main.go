@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"github.com/spf13/cast"
 )
@@ -37,5 +39,18 @@ func initRedisClient() (client *redis.Client, err error) {
 
 func main() {
 	redisClient, _ := initRedisClient()
-	TelegramBot(redisClient)
+	go TelegramBot(redisClient)
+	// Init router
+	r := mux.NewRouter()
+	r.HandleFunc("/health", healthCheck).Methods("GET")
+	// start app
+	startApp(r)
+}
+
+func healthCheck(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "Server is up :)")
+}
+
+func startApp(r *mux.Router) {
+	http.ListenAndServe(":8085", r)
 }
