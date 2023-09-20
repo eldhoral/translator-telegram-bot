@@ -42,9 +42,18 @@ func main() {
 	// Init router
 	r := mux.NewRouter()
 	r.HandleFunc("/health", healthCheck).Methods("GET")
+	// start app
+	startApp(r)
 	TelegramBot(redisClient)
 }
 
 func healthCheck(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Server is up :)")
+}
+
+func startApp(r *mux.Router) {
+	var srv http.Server
+
+	srv.Addr = fmt.Sprintf("%s:%d", "0.0.0.0", 8085)
+	srv.Handler = r
 }
