@@ -8,6 +8,7 @@ RUN apk update && apk upgrade && \
 WORKDIR /app
 
 ENV TZ=Asia/Jakarta
+ENV app_name=go-telegram-bot
 
 ADD . /app
 RUN mkdir -p audio \
@@ -15,10 +16,10 @@ RUN mkdir -p audio \
     && chmod -R g+w audio
 
 RUN go mod download
-RUN go get bitbucket.org/liamstask/goose/cmd/goose
 
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -ldflags '-extldflags "-static"' -o "./go-telegram-api" .
+RUN go install -mod=mod github.com/githubnemo/CompileDaemon
+RUN go get bitbucket.org/liamstask/goose/cmd/goose
 
 EXPOSE 8085
 
-ENTRYPOINT ["./go-telegram-api"]
+ENTRYPOINT CompileDaemon --build="go build -o /go/bin/${app_name} ." --command=/go/bin/${app_name} --directory=.
