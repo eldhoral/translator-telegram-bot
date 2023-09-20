@@ -21,4 +21,4 @@ RUN go get bitbucket.org/liamstask/goose/cmd/goose
 
 EXPOSE 8085
 
-ENTRYPOINT ["/app/nobuapiloan"]
+ENTRYPOINT ["/app"]
