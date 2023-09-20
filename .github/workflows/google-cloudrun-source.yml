@@ -81,15 +81,6 @@ jobs:
       #   with:
       #     credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          push: true
-          tags: gcr.io/${{ env.PROJECT_ID }}/${{ env.IMAGE_NAME }}:latest
-          build-args: |
-            HTTP_PORT=8085
-
       - name: Deploy to Cloud Run
         id: deploy
         uses: google-github-actions/deploy-cloudrun@v0
