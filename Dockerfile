@@ -17,7 +17,7 @@ RUN mkdir -p audio \
 RUN go mod download
 RUN go get bitbucket.org/liamstask/goose/cmd/goose
 
-RUN go build -o go-telegram-api
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -ldflags '-extldflags "-static"' -o "./go-telegram-api" .
 
 EXPOSE 8085
 
