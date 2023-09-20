@@ -52,9 +52,5 @@ func healthCheck(w http.ResponseWriter, r *http.Request) {
 }
 
 func startApp(r *mux.Router) {
-	var srv http.Server
-
-	srv.Addr = fmt.Sprintf("%s:%d", "0.0.0.0", 8085)
-	srv.Handler = r
-	log.Printf("[API] HTTP serve at %s\n", srv.Addr)
+	http.ListenAndServe(":8085", r)
 }
