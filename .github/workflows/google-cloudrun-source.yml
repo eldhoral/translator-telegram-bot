@@ -32,7 +32,7 @@
 #
 #    NOTE: You should always follow the principle of least privilege when assigning IAM roles
 #
-# 4. Create GitHub secrets for WIF_PROVIDER and WIF_SERVICE_ACCOUNT
+# 4. Create GitHub secrets for WIF_PROVIDER and WIF_SERVICE_ACCOUNT    
 #
 # 5. Change the values for the SERVICE and REGION environment variables (below).
 #
@@ -49,11 +49,6 @@ name: Deploy to Cloud Run from Source
 on:
   push:
     branches: [ "main" ]
-
-env:
-  PROJECT_ID: plasma-canyon-398310 # TODO: update Google Cloud project id
-  SERVICE: GO_TELEGRAM_BOT # TODO: update Cloud Run service name
-  REGION: asia-northeast1 # TODO: update Cloud Run service region
 
 jobs:
   deploy:
@@ -85,10 +80,21 @@ jobs:
         id: deploy
         uses: google-github-actions/deploy-cloudrun@v0
         with:
-          service: ${{ env.SERVICE }}
-          region: ${{ env.REGION }}
+          service: ${{ secrets.SERVICE }}
+          region: ${{ secrets.REGION }}
           # NOTE: If required, update to the appropriate source folder
           source: ./
+          env_vars: |
+              TELEGRAM_BOT_API_KEY=${{ secrets.TELEGRAM_BOT_API_KEY }}
+              AUDIO_PATH=${{ secrets.AUDIO_PATH }}
+              REDIS_HOST=${{ secrets.REDIS_HOST }}
+              REDIS_PORT=${{ secrets.REDIS_PORT }}
+              REDIS_DB=${{ secrets.REDIS_DB }}
+              REDIS_USERNAME=${{ secrets.REDIS_USERNAME }}
+              REDIS_PASSWORD=${{ secrets.REDIS_PASSWORD }}
+              REDIS_EXPIRATION_TIME=${{ secrets.REDIS_EXPIRATION_TIME }}
+              VOICEVOX_HOST=${{ secrets.VOICEVOX_HOST }}
+              VOICEVOX_PORT=${{ secrets.VOICEVOX_PORT }}
 
       # If required, use the Cloud Run url output in later steps
       - name: Show Output
