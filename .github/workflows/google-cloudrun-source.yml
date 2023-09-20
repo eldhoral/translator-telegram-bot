@@ -89,7 +89,7 @@ jobs:
           service: ${{ secrets.SERVICE }}
           region: ${{ secrets.REGION }}
           # NOTE: If required, update to the appropriate source folder
-          source: ./
+          # source: ./
           env_vars: |
               TELEGRAM_BOT_API_KEY=${{ secrets.TELEGRAM_BOT_API_KEY }}
               AUDIO_PATH=${{ secrets.AUDIO_PATH }}
