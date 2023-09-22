@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"path"
 
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
@@ -44,6 +46,7 @@ func main() {
 	// Init router
 	r := mux.NewRouter()
 	r.HandleFunc("/health", healthCheck).Methods("GET")
+	r.HandleFunc("/delete", healthCheck).Methods("GET")
 	// start app
 	startApp(r)
 }
@@ -54,4 +57,24 @@ func healthCheck(w http.ResponseWriter, r *http.Request) {
 
 func startApp(r *mux.Router) {
 	http.ListenAndServe(":8085", r)
+}
+
+func RemoveUnnecessaryFiles(w http.ResponseWriter, r *http.Request) {
+	err := DeleteAllCreatedAudio()
+	if err != nil {
+		fmt.Fprintf(w, "Failed task")
+	}
+	fmt.Fprintf(w, "Success task")
+}
+
+func DeleteAllCreatedAudio() (err error) {
+	dir, err := ioutil.ReadDir("./audio")
+	if err != nil {
+		log.Printf("DeleteAllCreatedAudio error: %v\n", err)
+		return
+	}
+	for _, d := range dir {
+		os.RemoveAll(path.Join([]string{"audio", d.Name()}...))
+	}
+	return
 }
