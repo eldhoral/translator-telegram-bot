@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"regexp"
+	"strings"
 
 	redisClient "go-telegram-bot/redis"
 
@@ -19,113 +21,67 @@ import (
 const (
 	CacheKeyTelegram = "go_telegram_bot:chat_id:"
 	StartMessage     = "/start"
+	VoiceCallback    = "Voice"
+	LanguageCallback = "Language"
 )
 
 type User struct {
 	TelegramId      int64
 	SpeakerSelected int
+	SourceLanguage  string
+	TargetLanguage  string
 }
 
-func TelegramBot(client *redis.Client) {
-	// new chat
-	msgButton1 := tgbotapi.NewInlineKeyboardButtonData("1.Normal", "2")
-	msgButton2 := tgbotapi.NewInlineKeyboardButtonData("2.Sweet", "0")
-	msgButton3 := tgbotapi.NewInlineKeyboardButtonData("3.Tsun Tsun", "6")
-	msgButton4 := tgbotapi.NewInlineKeyboardButtonData("4.Whisper", "26")
-	msgButtonRow1 := tgbotapi.NewInlineKeyboardRow(msgButton1, msgButton2)
-	msgButtonRow2 := tgbotapi.NewInlineKeyboardRow(msgButton3, msgButton4)
-	msgButtonMarkup := tgbotapi.NewInlineKeyboardMarkup(msgButtonRow1, msgButtonRow2)
+var onlyNumeric = regexp.MustCompile(`[^0-9]+`)
 
-	loadConfig()
+func TelegramBot(client *redis.Client) {
+	voiceStyle := InlineVoiceStyle()
 	bot, err := tgbotapi.NewBotAPI(os.Getenv("TELEGRAM_BOT_API_KEY"))
 	if err != nil {
 		log.Panic(err)
 	}
 
-	bot.Debug = true
-
+	bot.Debug = cast.ToBool(os.Getenv("BOT_DEBUG"))
 	log.Printf("Authorized on account %s", bot.Self.UserName)
 
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 60
-
 	updates := bot.GetUpdatesChan(u)
 
 	for update := range updates {
 		if update.Message != nil { // If we got a message
-			log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
 			if update.Message.Text == StartMessage {
-				text := "Please choose voice style (づ ◕‿◕ )づ"
-				msgCallBack := tgbotapi.NewMessage(update.Message.From.ID, text)
-				msgCallBack.ReplyMarkup = msgButtonMarkup
-				bot.Send(msgCallBack)
+				SendMessageChooseVoice(update.Message.From.ID, bot, voiceStyle)
 				continue
 			} else {
 				data, err := redisClient.NewRedisClient(client).Get(context.TODO(), CacheKeyTelegram+cast.ToString(update.Message.From.ID))
 				if err != nil || data == "" {
-					text := "Please choose voice again ヽ༼ ಠ益ಠ ༽ﾉ"
-					msgText := tgbotapi.NewMessage(update.Message.From.ID, text)
-					bot.Send(msgText)
-
-					msgCallBack := tgbotapi.NewMessage(update.Message.From.ID, update.Message.Text)
-					msgCallBack.ReplyMarkup = msgButtonMarkup
-					bot.Send(msgCallBack)
-				}
-				userTelegram := &User{}
-				err = jsoniter.Unmarshal([]byte(data), userTelegram)
-
-				client := voicevox.NewClient("http", os.Getenv("VOICEVOX_HOST")+":"+os.Getenv("VOICEVOX_PORT"))
-				result, _ := gt.Translate(update.Message.Text, "id", "ja")
-				query, err := client.CreateQuery(userTelegram.SpeakerSelected, result)
-				if err != nil {
-					text := "Oops, So many error (つ﹏⊂). Please try again"
-					msgText := tgbotapi.NewMessage(update.Message.From.ID, text)
-					bot.Send(msgText)
-					log.Printf("CreateVoice error: %v\n", err)
+					SendMessageChooseVoiceAgain(update.Message.From.ID, bot, voiceStyle)
 					continue
 				}
-
-				wavAudio, err := client.CreateVoice(userTelegram.SpeakerSelected, true, query)
+				translationResult, err := QueryToVoiceVox(data, bot, update)
 				if err != nil {
-					text := "Oops, So many error (つ﹏⊂). Please try again"
-					msgText := tgbotapi.NewMessage(update.Message.From.ID, text)
-					bot.Send(msgText)
-					log.Printf("CreateVoice error: %v\n", err)
+					SendMessageError(update.Message.From.ID, bot)
 					continue
 				}
-
-				CreateAudioFile(wavAudio, result, update.Message.From.ID)
-
-				// msg := tgbotapi.NewMessage(update.Message.Chat.ID, update.Message.Text)
-				msg := tgbotapi.NewAudio(update.Message.From.ID, tgbotapi.FilePath(os.Getenv("AUDIO_PATH")+cast.ToString(update.Message.From.ID)+"_"+result+".mp3"))
-				bot.Send(msg)
-				msgText := tgbotapi.NewMessage(update.Message.From.ID, result)
-				bot.Send(msgText)
+				SendMessageAudioWithTranslation(update.Message.From.ID, bot, translationResult, update)
 				continue
 			}
 
 		}
 
-		if update.CallbackData() != "" {
+		if strings.Contains(update.CallbackData(), VoiceCallback) {
 			text := "Voice is choosed. You can start typing any word ٩(•̤̀ᵕ•̤́๑)ᵒᵏᵎᵎᵎᵎ"
-			msgText := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, text)
-			bot.Send(msgText)
+			err := SaveUserPreferencesTelegram(text, bot, client, update)
+			if err != nil {
+				SendMessageError(update.CallbackQuery.Message.Chat.ID, bot)
+			}
+			continue
+		}
 
-			userTelegram := User{
-				TelegramId:      update.CallbackQuery.Message.Chat.ID,
-				SpeakerSelected: cast.ToInt(update.CallbackQuery.Data),
-			}
-			serviceBytes, err := jsoniter.Marshal(userTelegram)
-			if err != nil {
-				log.Printf("Error marshal with error: %v\n", err)
-			}
-			_, err = redisClient.NewRedisClient(client).Set(context.TODO(), CacheKeyTelegram+cast.ToString(update.CallbackQuery.Message.Chat.ID), serviceBytes)
-			if err != nil {
-				text = "Oops, voice styling is in development. So many error (つ﹏⊂)"
-				msgText = tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, text)
-				bot.Send(msgText)
-				log.Printf("[Redis] Error set cache to redis when adding data(): %v\n", err)
-			}
+		if strings.Contains(update.CallbackData(), LanguageCallback) {
+			// TODO
+			continue
 		}
 	}
 }
@@ -140,4 +96,102 @@ func CreateAudioFile(wavAudio []byte, filename string, teleId int64) {
 		log.Fatal(err)
 	}
 	log.Printf("Wrote %d bytes.\n", bytesWritten)
+}
+
+func SendMessageError(chatMessageId int64, bot *tgbotapi.BotAPI) {
+	text := "Oops, voice styling is in development. So many error (つ﹏⊂)"
+	msgText := tgbotapi.NewMessage(chatMessageId, text)
+	bot.Send(msgText)
+}
+
+func SendMessageChooseVoice(chatMessageId int64, bot *tgbotapi.BotAPI, inlineKeyboardMessage tgbotapi.InlineKeyboardMarkup) {
+	text := "Please choose voice style (づ ◕‿◕ )づ"
+	msgCallBack := tgbotapi.NewMessage(chatMessageId, text)
+	msgCallBack.ReplyMarkup = inlineKeyboardMessage
+	bot.Send(msgCallBack)
+}
+
+func SendMessageChooseVoiceAgain(chatMessageId int64, bot *tgbotapi.BotAPI, inlineKeyboardMessage tgbotapi.InlineKeyboardMarkup) {
+	text := "Please choose voice again ヽ༼ ಠ益ಠ ༽ﾉ"
+	msgCallBack := tgbotapi.NewMessage(chatMessageId, text)
+	msgCallBack.ReplyMarkup = inlineKeyboardMessage
+	bot.Send(msgCallBack)
+}
+
+func SendMessageAudioWithTranslation(chatMessageId int64, bot *tgbotapi.BotAPI, translationResult string, update tgbotapi.Update) {
+	msg := tgbotapi.NewAudio(update.Message.From.ID, tgbotapi.FilePath(os.Getenv("AUDIO_PATH")+cast.ToString(update.Message.From.ID)+"_"+translationResult+".mp3"))
+	bot.Send(msg)
+	msgText := tgbotapi.NewMessage(update.Message.From.ID, translationResult)
+	bot.Send(msgText)
+}
+
+func QueryToVoiceVox(userDataTelegram string, bot *tgbotapi.BotAPI, update tgbotapi.Update) (translationResult string, err error) {
+	userTelegram := &User{}
+	err = jsoniter.Unmarshal([]byte(userDataTelegram), userTelegram)
+
+	client := voicevox.NewClient("http", os.Getenv("VOICEVOX_HOST")+":"+os.Getenv("VOICEVOX_PORT"))
+	translationResult, _ = gt.Translate(update.Message.Text, "id", "ja")
+	query, err := client.CreateQuery(userTelegram.SpeakerSelected, translationResult)
+	if err != nil {
+		log.Printf("CreateVoice error: %v\n", err)
+		return
+	}
+
+	wavAudio, err := client.CreateVoice(userTelegram.SpeakerSelected, true, query)
+	if err != nil {
+		log.Printf("CreateVoice error: %v\n", err)
+		return
+	}
+
+	CreateAudioFile(wavAudio, translationResult, update.Message.From.ID)
+	return
+}
+
+func SaveUserPreferencesTelegram(text string, bot *tgbotapi.BotAPI, client *redis.Client, update tgbotapi.Update) (err error) {
+	msgText := tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, text)
+	bot.Send(msgText)
+
+	userTelegram := User{
+		TelegramId:      update.CallbackQuery.Message.Chat.ID,
+		SpeakerSelected: cast.ToInt(removeExceptNumber(update.CallbackQuery.Data)),
+	}
+
+	serviceBytes, err := jsoniter.Marshal(userTelegram)
+	if err != nil {
+		log.Printf("Error marshal with error: %v\n", err)
+	}
+	_, err = redisClient.NewRedisClient(client).Set(context.TODO(), CacheKeyTelegram+cast.ToString(update.CallbackQuery.Message.Chat.ID), serviceBytes)
+	if err != nil {
+		log.Printf("[Redis] Error set cache to redis when adding data(): %v\n", err)
+	}
+	return
+}
+
+func InlineVoiceStyle() (msgButtonMarkup tgbotapi.InlineKeyboardMarkup) {
+	msgButton1 := tgbotapi.NewInlineKeyboardButtonData("1.Normal", "Voice 2")
+	msgButton2 := tgbotapi.NewInlineKeyboardButtonData("2.Sweet", "Voice 0")
+	msgButton3 := tgbotapi.NewInlineKeyboardButtonData("3.Tsun Tsun", "Voice 6")
+	msgButton4 := tgbotapi.NewInlineKeyboardButtonData("4.Whisper", "Voice 26")
+	msgButtonRow1 := tgbotapi.NewInlineKeyboardRow(msgButton1, msgButton2)
+	msgButtonRow2 := tgbotapi.NewInlineKeyboardRow(msgButton3, msgButton4)
+	msgButtonMarkup = tgbotapi.NewInlineKeyboardMarkup(msgButtonRow1, msgButtonRow2)
+	return
+}
+
+func InlineLanguage() (msgButtonMarkup tgbotapi.InlineKeyboardMarkup) {
+	msgButton1 := tgbotapi.NewInlineKeyboardButtonData("Indonesia to Japanese", "Language 1")
+	msgButton2 := tgbotapi.NewInlineKeyboardButtonData("Japanese to Indonesia", "Language 2")
+	msgButton3 := tgbotapi.NewInlineKeyboardButtonData("Indonesia to English", "Language 3")
+	msgButton4 := tgbotapi.NewInlineKeyboardButtonData("English to Indonesia", "Language 4")
+	msgButtonRow1 := tgbotapi.NewInlineKeyboardRow(msgButton1)
+	msgButtonRow2 := tgbotapi.NewInlineKeyboardRow(msgButton2)
+	msgButtonRow3 := tgbotapi.NewInlineKeyboardRow(msgButton3)
+	msgButtonRow4 := tgbotapi.NewInlineKeyboardRow(msgButton4)
+	msgButtonMarkup = tgbotapi.NewInlineKeyboardMarkup(msgButtonRow1, msgButtonRow2, msgButtonRow3, msgButtonRow4)
+	return
+}
+
+func removeExceptNumber(str string) (result string) {
+	result = onlyNumeric.ReplaceAllString(str, "")
+	return
 }
