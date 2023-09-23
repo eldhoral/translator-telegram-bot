@@ -35,7 +35,6 @@ type User struct {
 var onlyNumeric = regexp.MustCompile(`[^0-9]+`)
 
 func TelegramBot(client *redis.Client) {
-	DeleteAllCreatedAudio()
 	voiceStyle := InlineVoiceStyle()
 	bot, err := tgbotapi.NewBotAPI(os.Getenv("TELEGRAM_BOT_API_KEY"))
 	if err != nil {
