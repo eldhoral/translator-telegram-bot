@@ -16,7 +16,7 @@ RUN mkdir -p audio \
     && chown -R $(id -u $(whoami)):0 audio \
     && chmod -R g+w audio
 
-# ////
+# /////
 RUN go mod download
 
 RUN go install -mod=mod github.com/githubnemo/CompileDaemon
