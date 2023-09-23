@@ -1,4 +1,5 @@
 .env
-audio/
+
 docker-compose.yml
 .github
+*.mp3
